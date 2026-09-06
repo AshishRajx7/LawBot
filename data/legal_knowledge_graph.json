@@ -1,0 +1,789 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "name": "Indian Constitutional Law Knowledge Graph",
+    "node_count": 77,
+    "edge_count": 58
+  },
+  "nodes": [
+    {
+      "id": "art_012",
+      "name": "Article 12",
+      "type": "Article",
+      "label": "Definition of State"
+    },
+    {
+      "id": "art_013",
+      "name": "Article 13",
+      "type": "Article",
+      "label": "Laws Inconsistent with FRs & Judicial Review"
+    },
+    {
+      "id": "art_014",
+      "name": "Article 14",
+      "type": "Article",
+      "label": "Equality Before Law & Non-Arbitrariness"
+    },
+    {
+      "id": "art_015",
+      "name": "Article 15",
+      "type": "Article",
+      "label": "Prohibition of Discrimination & Affirmative Action"
+    },
+    {
+      "id": "art_016",
+      "name": "Article 16",
+      "type": "Article",
+      "label": "Equality in Public Employment & Reservations"
+    },
+    {
+      "id": "art_019",
+      "name": "Article 19",
+      "type": "Article",
+      "label": "Six Fundamental Freedoms"
+    },
+    {
+      "id": "art_020",
+      "name": "Article 20",
+      "type": "Article",
+      "label": "Protection Against Self-Incrimination & Ex Post Facto"
+    },
+    {
+      "id": "art_021",
+      "name": "Article 21",
+      "type": "Article",
+      "label": "Protection of Life, Liberty & Dignity"
+    },
+    {
+      "id": "art_021a",
+      "name": "Article 21A",
+      "type": "Article",
+      "label": "Right to Education"
+    },
+    {
+      "id": "art_022",
+      "name": "Article 22",
+      "type": "Article",
+      "label": "Protection Against Arrest & Detention"
+    },
+    {
+      "id": "art_025",
+      "name": "Article 25",
+      "type": "Article",
+      "label": "Freedom of Religion & Conscience"
+    },
+    {
+      "id": "art_032",
+      "name": "Article 32",
+      "type": "Article",
+      "label": "Constitutional Writs & Supreme Court Remedies"
+    },
+    {
+      "id": "art_141",
+      "name": "Article 141",
+      "type": "Article",
+      "label": "Binding Precedent / Stare Decisis"
+    },
+    {
+      "id": "art_142",
+      "name": "Article 142",
+      "type": "Article",
+      "label": "Plenary Power for Complete Justice"
+    },
+    {
+      "id": "art_226",
+      "name": "Article 226",
+      "type": "Article",
+      "label": "High Court Plenary Writ Jurisdiction"
+    },
+    {
+      "id": "art_300a",
+      "name": "Article 300A",
+      "type": "Article",
+      "label": "Right to Property"
+    },
+    {
+      "id": "art_352",
+      "name": "Article 352",
+      "type": "Article",
+      "label": "National Emergency"
+    },
+    {
+      "id": "art_356",
+      "name": "Article 356",
+      "type": "Article",
+      "label": "President's Rule in States"
+    },
+    {
+      "id": "art_368",
+      "name": "Article 368",
+      "type": "Article",
+      "label": "Power of Parliament to Amend Constitution"
+    },
+    {
+      "id": "case_001",
+      "name": "A.K. Gopalan v. State of Madras",
+      "type": "Case",
+      "year": 1950,
+      "citation": "AIR 1950 SC 27"
+    },
+    {
+      "id": "case_002",
+      "name": "Maneka Gandhi v. Union of India",
+      "type": "Case",
+      "year": 1978,
+      "citation": "AIR 1978 SC 597"
+    },
+    {
+      "id": "case_003",
+      "name": "Justice K.S. Puttaswamy v. Union of India",
+      "type": "Case",
+      "year": 2017,
+      "citation": "(2017) 10 SCC 1"
+    },
+    {
+      "id": "case_004",
+      "name": "Kesavananda Bharati v. State of Kerala",
+      "type": "Case",
+      "year": 1973,
+      "citation": "(1973) 4 SCC 225"
+    },
+    {
+      "id": "case_005",
+      "name": "Minerva Mills Ltd. v. Union of India",
+      "type": "Case",
+      "year": 1980,
+      "citation": "(1980) 3 SCC 625"
+    },
+    {
+      "id": "case_006",
+      "name": "E.P. Royappa v. State of Tamil Nadu",
+      "type": "Case",
+      "year": 1974,
+      "citation": "(1974) 4 SCC 3"
+    },
+    {
+      "id": "case_007",
+      "name": "Indra Sawhney v. Union of India",
+      "type": "Case",
+      "year": 1992,
+      "citation": "AIR 1993 SC 477"
+    },
+    {
+      "id": "case_008",
+      "name": "Shayara Bano v. Union of India",
+      "type": "Case",
+      "year": 2017,
+      "citation": "(2017) 9 SCC 1"
+    },
+    {
+      "id": "case_009",
+      "name": "Navtej Singh Johar v. Union of India",
+      "type": "Case",
+      "year": 2018,
+      "citation": "(2018) 10 SCC 1"
+    },
+    {
+      "id": "case_010",
+      "name": "Shreya Singhal v. Union of India",
+      "type": "Case",
+      "year": 2015,
+      "citation": "(2015) 5 SCC 1"
+    },
+    {
+      "id": "case_011",
+      "name": "Siddharam Satlingappa Mhetre v. State of Maharashtra",
+      "type": "Case",
+      "year": 2011,
+      "citation": "(2011) 1 SCC 694"
+    },
+    {
+      "id": "case_012",
+      "name": "D.K. Basu v. State of West Bengal",
+      "type": "Case",
+      "year": 1997,
+      "citation": "(1997) 1 SCC 416"
+    },
+    {
+      "id": "case_013",
+      "name": "Vishaka v. State of Rajasthan",
+      "type": "Case",
+      "year": 1997,
+      "citation": "(1997) 6 SCC 241"
+    },
+    {
+      "id": "case_014",
+      "name": "S.R. Bommai v. Union of India",
+      "type": "Case",
+      "year": 1994,
+      "citation": "(1994) 3 SCC 1"
+    },
+    {
+      "id": "case_015",
+      "name": "Secretary, State of Karnataka v. Umadevi",
+      "type": "Case",
+      "year": 2006,
+      "citation": "(2006) 4 SCC 1"
+    },
+    {
+      "id": "case_016",
+      "name": "Olga Tellis v. Bombay Municipal Corporation",
+      "type": "Case",
+      "year": 1985,
+      "citation": "(1985) 3 SCC 545"
+    },
+    {
+      "id": "case_017",
+      "name": "Francis Coralie Mullin v. Administrator, UT of Delhi",
+      "type": "Case",
+      "year": 1981,
+      "citation": "(1981) 1 SCC 608"
+    },
+    {
+      "id": "case_018",
+      "name": "Hussainara Khatoon v. State of Bihar",
+      "type": "Case",
+      "year": 1979,
+      "citation": "(1979) 3 SCC 816"
+    },
+    {
+      "id": "case_019",
+      "name": "Sunil Batra v. Delhi Administration",
+      "type": "Case",
+      "year": 1980,
+      "citation": "(1980) 3 SCC 488"
+    },
+    {
+      "id": "case_020",
+      "name": "Selvi v. State of Karnataka",
+      "type": "Case",
+      "year": 2010,
+      "citation": "(2010) 7 SCC 263"
+    },
+    {
+      "id": "case_021",
+      "name": "Common Cause v. Union of India",
+      "type": "Case",
+      "year": 2018,
+      "citation": "(2018) 5 SCC 1"
+    },
+    {
+      "id": "case_022",
+      "name": "People's Union for Civil Liberties v. Union of India",
+      "type": "Case",
+      "year": 1997,
+      "citation": "(1997) 1 SCC 301"
+    },
+    {
+      "id": "case_023",
+      "name": "Joseph Shine v. Union of India",
+      "type": "Case",
+      "year": 2018,
+      "citation": "(2018) 2 SCC 189"
+    },
+    {
+      "id": "case_024",
+      "name": "Kharak Singh v. State of UP",
+      "type": "Case",
+      "year": 1963,
+      "citation": "AIR 1963 SC 1295"
+    },
+    {
+      "id": "case_025",
+      "name": "M.P. Sharma v. Satish Chandra",
+      "type": "Case",
+      "year": 1954,
+      "citation": "AIR 1954 SC 300"
+    },
+    {
+      "id": "case_026",
+      "name": "ADM Jabalpur v. Shivkant Shukla",
+      "type": "Case",
+      "year": 1976,
+      "citation": "(1976) 2 SCC 521"
+    },
+    {
+      "id": "case_027",
+      "name": "I.C. Golaknath v. State of Punjab",
+      "type": "Case",
+      "year": 1967,
+      "citation": "AIR 1967 SC 1643"
+    },
+    {
+      "id": "case_028",
+      "name": "Waman Rao v. Union of India",
+      "type": "Case",
+      "year": 1981,
+      "citation": "(1981) 2 SCC 362"
+    },
+    {
+      "id": "case_029",
+      "name": "I.R. Coelho v. State of Tamil Nadu",
+      "type": "Case",
+      "year": 2007,
+      "citation": "(2007) 2 SCC 1"
+    },
+    {
+      "id": "case_030",
+      "name": "R.C. Cooper v. Union of India",
+      "type": "Case",
+      "year": 1970,
+      "citation": "(1970) 1 SCC 248"
+    },
+    {
+      "id": "case_032",
+      "name": "Shankari Prasad v. Union of India",
+      "type": "Case",
+      "year": 1951,
+      "citation": "AIR 1951 SC 458"
+    },
+    {
+      "id": "case_033",
+      "name": "Sajjan Singh v. State of Rajasthan",
+      "type": "Case",
+      "year": 1965,
+      "citation": "AIR 1965 SC 845"
+    },
+    {
+      "id": "case_036",
+      "name": "Anuradha Bhasin v. Union of India",
+      "type": "Case",
+      "year": 2020,
+      "citation": "(2020) 3 SCC 637"
+    },
+    {
+      "id": "case_038",
+      "name": "S.P. Gupta v. Union of India",
+      "type": "Case",
+      "year": 1981,
+      "citation": "AIR 1982 SC 149"
+    },
+    {
+      "id": "case_039",
+      "name": "Supreme Court Advocates-on-Record Association v. Union of India",
+      "type": "Case",
+      "year": 1993,
+      "citation": "(1993) 4 SCC 441"
+    },
+    {
+      "id": "case_040",
+      "name": "Supreme Court Advocates-on-Record Association v. Union of India (NJAC)",
+      "type": "Case",
+      "year": 2015,
+      "citation": "(2016) 5 SCC 1"
+    },
+    {
+      "id": "case_041",
+      "name": "L. Chandra Kumar v. Union of India",
+      "type": "Case",
+      "year": 1997,
+      "citation": "(1997) 3 SCC 261"
+    },
+    {
+      "id": "case_048",
+      "name": "Indian Young Lawyers Association v. State of Kerala",
+      "type": "Case",
+      "year": 2018,
+      "citation": "(2019) 11 SCC 1"
+    },
+    {
+      "id": "case_049",
+      "name": "National Legal Services Authority v. Union of India",
+      "type": "Case",
+      "year": 2014,
+      "citation": "(2014) 5 SCC 438"
+    },
+    {
+      "id": "doc_basic_structure",
+      "name": "Basic Structure Doctrine",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_due_process",
+      "name": "Substantive Due Process",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_golden_triangle",
+      "name": "Golden Triangle Doctrine",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_anti_arbitrariness",
+      "name": "Anti-Arbitrariness Doctrine",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_manifest_arbitrariness",
+      "name": "Manifest Arbitrariness Doctrine",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_privacy",
+      "name": "Right to Privacy",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_proportionality",
+      "name": "Proportionality Standard",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_creamy_layer",
+      "name": "Creamy Layer Principle",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_judicial_review",
+      "name": "Judicial Review of Legislation",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_prospective_overruling",
+      "name": "Prospective Overruling",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_constitutional_morality",
+      "name": "Constitutional Morality",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_speedy_trial",
+      "name": "Right to Speedy Trial",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_livelihood",
+      "name": "Right to Livelihood",
+      "type": "Doctrine"
+    },
+    {
+      "id": "doc_collegium",
+      "name": "Collegium System",
+      "type": "Doctrine"
+    },
+    {
+      "id": "amend_001",
+      "name": "1st Constitutional Amendment Act, 1951",
+      "type": "Amendment",
+      "year": 1951
+    },
+    {
+      "id": "amend_024",
+      "name": "24th Constitutional Amendment Act, 1971",
+      "type": "Amendment",
+      "year": 1971
+    },
+    {
+      "id": "amend_042",
+      "name": "42nd Constitutional Amendment Act, 1976",
+      "type": "Amendment",
+      "year": 1976
+    },
+    {
+      "id": "amend_044",
+      "name": "44th Constitutional Amendment Act, 1978",
+      "type": "Amendment",
+      "year": 1978
+    },
+    {
+      "id": "amend_099",
+      "name": "99th Constitutional Amendment Act (NJAC), 2014",
+      "type": "Amendment",
+      "year": 2014
+    }
+  ],
+  "edges": [
+    {
+      "source": "case_002",
+      "relation": "ESTABLISHES",
+      "target": "doc_due_process"
+    },
+    {
+      "source": "case_002",
+      "relation": "ESTABLISHES",
+      "target": "doc_golden_triangle"
+    },
+    {
+      "source": "case_004",
+      "relation": "ESTABLISHES",
+      "target": "doc_basic_structure"
+    },
+    {
+      "source": "case_006",
+      "relation": "ESTABLISHES",
+      "target": "doc_anti_arbitrariness"
+    },
+    {
+      "source": "case_008",
+      "relation": "ESTABLISHES",
+      "target": "doc_manifest_arbitrariness"
+    },
+    {
+      "source": "case_003",
+      "relation": "ESTABLISHES",
+      "target": "doc_privacy"
+    },
+    {
+      "source": "case_003",
+      "relation": "ESTABLISHES",
+      "target": "doc_proportionality"
+    },
+    {
+      "source": "case_007",
+      "relation": "ESTABLISHES",
+      "target": "doc_creamy_layer"
+    },
+    {
+      "source": "case_016",
+      "relation": "ESTABLISHES",
+      "target": "doc_livelihood"
+    },
+    {
+      "source": "case_018",
+      "relation": "ESTABLISHES",
+      "target": "doc_speedy_trial"
+    },
+    {
+      "source": "case_027",
+      "relation": "ESTABLISHES",
+      "target": "doc_prospective_overruling"
+    },
+    {
+      "source": "case_039",
+      "relation": "ESTABLISHES",
+      "target": "doc_collegium"
+    },
+    {
+      "source": "case_041",
+      "relation": "ESTABLISHES",
+      "target": "doc_judicial_review"
+    },
+    {
+      "source": "case_002",
+      "relation": "OVERRULES",
+      "target": "case_001"
+    },
+    {
+      "source": "case_030",
+      "relation": "OVERRULES",
+      "target": "case_001"
+    },
+    {
+      "source": "case_004",
+      "relation": "OVERRULES",
+      "target": "case_027"
+    },
+    {
+      "source": "case_003",
+      "relation": "OVERRULES",
+      "target": "case_024"
+    },
+    {
+      "source": "case_003",
+      "relation": "OVERRULES",
+      "target": "case_025"
+    },
+    {
+      "source": "case_003",
+      "relation": "OVERRULES",
+      "target": "case_026"
+    },
+    {
+      "source": "case_039",
+      "relation": "OVERRULES",
+      "target": "case_038"
+    },
+    {
+      "source": "case_005",
+      "relation": "RELIES_ON",
+      "target": "case_004"
+    },
+    {
+      "source": "case_028",
+      "relation": "RELIES_ON",
+      "target": "case_004"
+    },
+    {
+      "source": "case_029",
+      "relation": "RELIES_ON",
+      "target": "case_004"
+    },
+    {
+      "source": "case_003",
+      "relation": "RELIES_ON",
+      "target": "case_002"
+    },
+    {
+      "source": "case_009",
+      "relation": "RELIES_ON",
+      "target": "case_003"
+    },
+    {
+      "source": "case_010",
+      "relation": "RELIES_ON",
+      "target": "case_002"
+    },
+    {
+      "source": "case_036",
+      "relation": "RELIES_ON",
+      "target": "case_003"
+    },
+    {
+      "source": "case_002",
+      "relation": "EXPANDS",
+      "target": "art_021"
+    },
+    {
+      "source": "case_003",
+      "relation": "EXPANDS",
+      "target": "art_021"
+    },
+    {
+      "source": "case_016",
+      "relation": "EXPANDS",
+      "target": "art_021"
+    },
+    {
+      "source": "case_017",
+      "relation": "EXPANDS",
+      "target": "art_021"
+    },
+    {
+      "source": "case_018",
+      "relation": "EXPANDS",
+      "target": "art_021"
+    },
+    {
+      "source": "case_021",
+      "relation": "EXPANDS",
+      "target": "art_021"
+    },
+    {
+      "source": "case_049",
+      "relation": "EXPANDS",
+      "target": "art_021"
+    },
+    {
+      "source": "case_036",
+      "relation": "EXPANDS",
+      "target": "art_019"
+    },
+    {
+      "source": "case_010",
+      "relation": "EXPANDS",
+      "target": "art_019"
+    },
+    {
+      "source": "case_004",
+      "relation": "LIMITS",
+      "target": "art_368"
+    },
+    {
+      "source": "case_005",
+      "relation": "LIMITS",
+      "target": "art_368"
+    },
+    {
+      "source": "case_005",
+      "relation": "LIMITS",
+      "target": "amend_042"
+    },
+    {
+      "source": "case_007",
+      "relation": "LIMITS",
+      "target": "art_016"
+    },
+    {
+      "source": "case_014",
+      "relation": "LIMITS",
+      "target": "art_356"
+    },
+    {
+      "source": "case_040",
+      "relation": "LIMITS",
+      "target": "amend_099"
+    },
+    {
+      "source": "case_041",
+      "relation": "LIMITS",
+      "target": "art_032"
+    },
+    {
+      "source": "case_001",
+      "relation": "INTERPRETS",
+      "target": "art_021"
+    },
+    {
+      "source": "case_006",
+      "relation": "INTERPRETS",
+      "target": "art_014"
+    },
+    {
+      "source": "case_008",
+      "relation": "INTERPRETS",
+      "target": "art_014"
+    },
+    {
+      "source": "case_012",
+      "relation": "INTERPRETS",
+      "target": "art_022"
+    },
+    {
+      "source": "case_013",
+      "relation": "INTERPRETS",
+      "target": "art_142"
+    },
+    {
+      "source": "case_020",
+      "relation": "INTERPRETS",
+      "target": "art_020"
+    },
+    {
+      "source": "case_022",
+      "relation": "INTERPRETS",
+      "target": "art_021"
+    },
+    {
+      "source": "case_023",
+      "relation": "INTERPRETS",
+      "target": "art_014"
+    },
+    {
+      "source": "case_048",
+      "relation": "INTERPRETS",
+      "target": "art_025"
+    },
+    {
+      "source": "art_014",
+      "relation": "CONNECTED_TO",
+      "target": "art_019"
+    },
+    {
+      "source": "art_019",
+      "relation": "CONNECTED_TO",
+      "target": "art_021"
+    },
+    {
+      "source": "art_021",
+      "relation": "CONNECTED_TO",
+      "target": "art_014"
+    },
+    {
+      "source": "art_032",
+      "relation": "CONNECTED_TO",
+      "target": "art_226"
+    },
+    {
+      "source": "art_013",
+      "relation": "CONNECTED_TO",
+      "target": "art_368"
+    },
+    {
+      "source": "art_352",
+      "relation": "CONNECTED_TO",
+      "target": "art_356"
+    }
+  ]
+}

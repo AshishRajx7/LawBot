@@ -1,0 +1,90 @@
+# tests/test_metadata_boosts.py — Validation Suite for Metadata-Aware Weighted Fusion
+import unittest
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath("."))
+from legal_retriever import LegalRetriever
+
+class TestMetadataBoosts(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.retriever = LegalRetriever()
+
+    def test_constitutional_provision_boost(self):
+        query = "What is Article 21 of the Indian Constitution?"
+        res = self.retriever.retrieve(query, top_k=5)
+        self.assertEqual(res["classification"]["primary_class"], "Constitutional Provision Query")
+        # Constitutional articles should receive both article match (+0.25) and provision boost (+0.25)
+        top_doc = res["top_results"][0]
+        self.assertGreaterEqual(top_doc["meta_boost"], 0.25)
+        self.assertEqual(top_doc["primary_article"], "Article 21")
+
+    def test_landmark_case_boost(self):
+        query = "What did the Supreme Court hold in Kesavananda Bharati v. State of Kerala?"
+        res = self.retriever.retrieve(query, top_k=5)
+        self.assertEqual(res["classification"]["primary_class"], "Landmark Case Query")
+        top_doc = res["top_results"][0]
+        self.assertGreaterEqual(top_doc["meta_boost"], 0.15)
+        self.assertIn("Kesavananda Bharati", top_doc["title"])
+
+    def test_doctrine_boost(self):
+        query = "What is the basic structure doctrine?"
+        res = self.retriever.retrieve(query, top_k=5)
+        self.assertEqual(res["classification"]["primary_class"], "Doctrine Query")
+        # Ratio chunks and doctrine cases should receive ratio boost
+        ratio_found = any(d["doc_type"] == "ratio_chunk" and d["meta_boost"] >= 0.20 for d in res["top_results"])
+        self.assertTrue(ratio_found, "Doctrine query should apply ratio_chunk metadata boost >= 0.20")
+
+    def test_amendment_query_boost(self):
+        # Task 3: Amendment Query metadata boost
+        query = "Can Parliament amend fundamental rights under Article 368?"
+        res = self.retriever.retrieve(query, top_k=5)
+        self.assertEqual(res["classification"]["primary_class"], "Amendment Query")
+        # Check that amendment or Article 368 documents receive amendment boost (+0.15 / +0.10)
+        boosted_found = any(d["meta_boost"] >= 0.10 and (d["primary_article"] == "Article 368" or "amend" in d["title"].lower()) for d in res["top_results"])
+        self.assertTrue(boosted_found, "Amendment query must apply amendment metadata boost")
+
+    def test_fundamental_rights_boost(self):
+        # Task 3: Fundamental Rights Query metadata boost
+        query = "Is the right to privacy a fundamental right?"
+        res = self.retriever.retrieve(query, top_k=5)
+        self.assertEqual(res["classification"]["primary_class"], "Fundamental Rights Query")
+        # Check that Part III / Fundamental Rights documents receive +0.15 / +0.10 boost
+        boosted_found = any(d["meta_boost"] >= 0.10 for d in res["top_results"])
+        self.assertTrue(boosted_found, "Fundamental rights query must apply Part III metadata boost")
+
+    def test_judicial_review_boost(self):
+        # Task 3: Judicial Review Query metadata boost
+        query = "What is the scope of judicial review under Article 32 and Article 226?"
+        res = self.retriever.retrieve(query, top_k=5)
+        self.assertEqual(res["classification"]["primary_class"], "Judicial Review Query")
+        boosted_found = any(d["meta_boost"] >= 0.10 for d in res["top_results"])
+        self.assertTrue(boosted_found, "Judicial review query must apply judicial review metadata boost")
+
+    def test_comparative_case_boost(self):
+        query = "Compare A.K. Gopalan and Maneka Gandhi on personal liberty"
+        res = self.retriever.retrieve(query, top_k=5)
+        self.assertEqual(res["classification"]["primary_class"], "Comparative Case Query")
+        top_doc = res["top_results"][0]
+        self.assertGreaterEqual(top_doc["meta_boost"], 0.15)
+
+    def test_procedural_law_boost(self):
+        # Task 3: Procedural Law Query metadata boost
+        query = "What are the procedural guidelines for arrest under D.K. Basu?"
+        res = self.retriever.retrieve(query, top_k=5)
+        self.assertIn(res["classification"]["primary_class"], ("Procedural Law Query", "Landmark Case Query"))
+        boosted_found = any(d["meta_boost"] >= 0.05 for d in res["top_results"])
+        self.assertTrue(boosted_found, "Procedural law query must apply procedural metadata boost")
+
+    def test_general_legal_question_boost(self):
+        # Task 3: General Legal Question metadata boost
+        query = "What is the difference between an ordinance and an act?"
+        res = self.retriever.retrieve(query, top_k=5)
+        self.assertIn(res["classification"]["primary_class"], ("General Legal Question", "Doctrine Query"))
+        boosted_found = any(d["meta_boost"] >= 0.05 for d in res["top_results"])
+        self.assertTrue(boosted_found, "General legal question must apply broad constitutional relevance boost")
+
+if __name__ == "__main__":
+    unittest.main()

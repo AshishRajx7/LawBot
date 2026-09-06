@@ -1,128 +1,254 @@
-# app.py — Streamlit LawBot Chat (Final)
+# app.py — Streamlit LawBot (Production Metadata-Aware Hybrid Retrieval + Knowledge Graph + Hallucination Auditing)
 import os
+import time
+import json
 import streamlit as st
-import pandas as pd
-import chromadb
-from sentence_transformers import SentenceTransformer
 from huggingface_hub import InferenceClient
 from dotenv import load_dotenv
 
-# ========== CONFIG ==========
-DATA_PATH = "data/cases.csv"
-MODEL_NAME = "law-ai/InLegalBERT"
-CHAT_MODEL = "mistralai/Mistral-7B-Instruct-v0.2"
+from legal_retriever import LegalRetriever
+from legal_hallucination_detector import LegalHallucinationDetector
 
-# Load API key
+# ========== CONFIG ==========
+CHROMA_PATH = "data/chroma_db"
+BM25_PATH = "data/bm25_index.json"
+CHAT_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
+RERANK_MODEL = os.getenv("RERANK_MODEL", "ms-marco-TinyBERT-L-2-v2")
+
+# Load environment variables
 load_dotenv()
 HF_TOKEN = os.getenv("HF_API_KEY")
 
-# ========== INIT ==========
-st.set_page_config(page_title="⚖️ LawBot – Indian Legal Assistant", layout="wide")
-st.title("⚖️ LawBot — Your Indian Legal Chat Assistant")
+# ========== PAGE CONFIG & INITIAL HEALTH CHECKS ==========
+st.set_page_config(
+    page_title="⚖️ LawBot – Indian Constitutional Law Assistant",
+    page_icon="⚖️",
+    layout="wide"
+)
+st.title("⚖️ LawBot — Indian Constitutional Law Intelligence Assistant")
+st.caption("Next-Generation Constitutional Intelligence: Query Understanding • Knowledge Graph Traversal • Metadata-Aware Fusion • Hallucination Auditing")
 
-# Cache models and database
+# Validate environment variables
+if not HF_TOKEN:
+    st.error("🔑 **API Key Missing**: The `HF_API_KEY` environment variable is not configured. Please set `HF_API_KEY` in your environment or Render settings.")
+    st.stop()
+
+# Validate database files on disk
+if not os.path.exists(CHROMA_PATH) or not os.path.exists(BM25_PATH):
+    st.error(f"📁 **Database Files Missing**: Required knowledge-base indexes ('{CHROMA_PATH}', '{BM25_PATH}') were not found. Please run `python embed_cases.py` to build the hybrid index before launching.")
+    st.stop()
+
+# ========== INITIALIZE ENGINES (CACHED ONCE AT STARTUP) ==========
 @st.cache_resource(show_spinner=False)
-def init_retriever():
-    """Initialize InLegalBERT + Chroma retriever"""
-    df = pd.read_csv(DATA_PATH)
-    model = SentenceTransformer(MODEL_NAME)
-    client = chromadb.Client()
-
-    # Create or load collection
-    collection_name = "indian_cases"
-    existing = [c.name for c in client.list_collections()]
-    if collection_name in existing:
-        collection = client.get_collection(collection_name)
-    else:
-        texts = df["verdict_summary"].fillna("").tolist()
-        embeddings = model.encode(texts, show_progress_bar=True)
-        collection = client.create_collection(collection_name)
-        collection.add(
-            documents=texts,
-            embeddings=embeddings,
-            metadatas=df.to_dict("records"),
-            ids=[str(i) for i in range(len(texts))],
-        )
-    return model, collection
+def init_retrieval_and_audit_engines():
+    """Load persistent hybrid retriever, knowledge graph, and hallucination auditor"""
+    try:
+        retriever = LegalRetriever(rerank_model=RERANK_MODEL)
+        detector = LegalHallucinationDetector()
+        return retriever, detector, None
+    except Exception as e:
+        return None, None, f"Engine initialization failed: {e}"
 
 @st.cache_resource(show_spinner=False)
 def init_llm():
-    """Initialize Mistral-7B model"""
+    """Initialize LLM model client"""
     return InferenceClient(model=CHAT_MODEL, token=HF_TOKEN)
 
-embed_model, vector_db = init_retriever()
+retriever, detector, init_err = init_retrieval_and_audit_engines()
+if init_err:
+    st.error(f"❌ **Engine Initialization Error**: {init_err}")
+    st.stop()
+
 llm = init_llm()
 
-# ========== CHAT UI ==========
-st.markdown("💬 Ask any legal question (e.g., *What is the interpretation of Article 21?*)")
+# ========== CHAT UI & SESSION STATE ==========
+st.markdown("💬 Ask any constitutional law question (e.g., *What is Article 21?*, *Which case established substantive due process?*, *What is the basic structure doctrine?*)")
 
 if "history" not in st.session_state:
-    st.session_state.history = []  # stores dicts of {'role': 'user'/'assistant', 'content': str}
+    st.session_state.history = []
 
-query = st.text_input("Enter your question:")
+query = st.text_input("Enter your constitutional question:")
 
 if query:
-    # Add user query to session
     st.session_state.history.append({"role": "user", "content": query})
 
-    # 🔍 Step 1: Retrieve top relevant cases
-    with st.spinner("🔍 Searching relevant cases..."):
-        query_embedding = embed_model.encode([query])
-        results = vector_db.query(query_embeddings=query_embedding, n_results=3)
-        metadatas = results["metadatas"][0]
-        context = "\n\n".join(
-            [f"{m['case_name']}: {m['verdict_summary']}" for m in metadatas]
+    # 🔍 Step 1: Execute End-to-End Metadata-Aware Hybrid Retrieval Pipeline
+    with st.spinner("🔍 Executing query classification, graph traversal, hybrid retrieval & cross-encoder reranking..."):
+        retrieval_res = retriever.retrieve(query, top_k=5)
+
+    top_candidates = retrieval_res["top_results"]
+    cls_res = retrieval_res["classification"]
+    timings = retrieval_res["timings"]
+    candidate_pool_size = retrieval_res["candidate_pool_size"]
+    overlap_pct = retrieval_res["overlap_percentage"]
+    graph_insights = retrieval_res.get("graph_insights", {})
+
+    if not top_candidates:
+        st.warning("⚠️ **Search Notice**: No relevant legal materials were found in the knowledge base.")
+        st.stop()
+
+    # 🏷️ Display Query Understanding Classification Pill
+    col_cls1, col_cls2, col_cls3 = st.columns([2, 1, 1])
+    with col_cls1:
+        st.info(f"🏷️ **Query Intent:** `{cls_res['primary_class']}` (Confidence: `{cls_res['confidence']*100:.0f}%`)")
+    with col_cls2:
+        detected_arts = ", ".join(cls_res["detected_articles"]) if cls_res["detected_articles"] else "None"
+        st.caption(f"📜 **Detected Articles:** `{detected_arts}`")
+    with col_cls3:
+        detected_cases = ", ".join(cls_res["detected_cases"]) if cls_res["detected_cases"] else "None"
+        st.caption(f"⚖️ **Detected Cases:** `{detected_cases}`")
+
+    # 📚 Step 2: Build Structured Legal Context Blocks (SOURCE 1, SOURCE 2, ...)
+    context_blocks = []
+    for i, c in enumerate(top_candidates, 1):
+        doc_badge = (
+            "Constitutional Article" if c["doc_type"] == "constitutional_article"
+            else "Ratio Decidendi Chunk" if c["doc_type"] == "ratio_chunk"
+            else "Landmark Precedent"
         )
+        block = (
+            f"SOURCE {i}\n"
+            f"Title: {c['title']}\n"
+            f"Citation: {c['citation']}\n"
+            f"Court: {c['court']}\n"
+            f"Year: {c['year']}\n"
+            f"Document Type: {doc_badge}\n"
+            f"Primary Provision: {c['primary_article']}\n\n"
+            f"Content:\n{c['content']}"
+        )
+        context_blocks.append(block)
 
-    # 🧠 Step 2: Build contextual prompt using conversation memory
-    recent_turns = st.session_state.history[-5:]  # last 5 turns
-    conversation_context = "\n".join(
-        [f"{msg['role'].capitalize()}: {msg['content']}" for msg in recent_turns]
-    )
+    separator = "\n\n" + ("=" * 40) + "\n\n"
+    context = separator.join(context_blocks)
 
-    full_prompt = f"""
-You are LawBot, an AI legal assistant specialized in Indian constitutional law.
-Refer to the case context and conversation below to generate an accurate, concise, and legally correct answer.
-Always explain with reasoning and cite relevant cases when possible.
+    # 🧠 Step 3: Structured Legal Analysis Prompt
+    full_prompt = f"""You are an Indian constitutional law research assistant.
 
-Case Context:
+Answer only from the retrieved materials.
+
+For every answer:
+1. State the legal principle.
+2. Cite the relevant constitutional provision.
+3. Cite the relevant cases.
+4. Explain the court's reasoning.
+5. If retrieved materials are insufficient, explicitly say so.
+
+Format your response strictly using the following four sections:
+
+### Legal Principle
+[State the exact legal and constitutional principle established by the authorities]
+
+### Relevant Constitutional Provision
+[Cite the constitutional article and explain its core constitutional mandate]
+
+### Court Reasoning
+[Detail the court's ratio decidendi and rationale from the retrieved sources]
+
+### Authorities Relied Upon
+[List every source cited with its full citation, formatted as:
+1. Case / Article Name, Official Citation (Court, Year)
+2. ...]
+
+Retrieved Materials:
 {context}
 
-Conversation:
-{conversation_context}
+Question:
+{query}"""
 
-User Question: {query}
-
-Answer:
-"""
-
-    # ⚖️ Step 3: Generate the answer
-    with st.spinner("⚖️ Generating contextual answer..."):
-        response = llm.chat_completion(
-            messages=[
-                {"role": "system", "content": "You are LawBot, an expert in Indian law."},
-                {"role": "user", "content": full_prompt},
-            ],
-            max_tokens=400,
-        )
-        answer = response.choices[0].message["content"]
+    # ⚖️ Step 4: Generate Grounded Answer via Hugging Face InferenceClient
+    with st.spinner("⚖️ Synthesizing legal analysis from retrieved sources..."):
+        try:
+            response = llm.chat_completion(
+                messages=[
+                    {"role": "user", "content": full_prompt},
+                ],
+                max_tokens=750,
+            )
+            choice = response.choices[0]
+            answer = (
+                choice.message.content
+                if hasattr(choice.message, "content")
+                else choice.message.get("content", "")
+            )
+        except Exception as e:
+            st.error(f"❌ **LLM API Error**: Failed to generate answer from Hugging Face Inference API: {e}")
+            st.stop()
 
     st.session_state.history.append({"role": "assistant", "content": answer})
 
-    # 🧾 Step 4: Display result
-    st.subheader("🧠 LawBot’s Answer")
-    st.write(answer)
+    # 🛡️ Step 5: Hallucination & Source Grounding Verification
+    with st.spinner("🛡️ Auditing response for factual grounding and citation validity..."):
+        audit_res = detector.audit(answer, top_candidates)
+
+    # 🧾 Step 6: Render Answer
+    st.subheader("🧠 LawBot’s Legal Analysis")
+    st.markdown(answer)
+
+    # 🛡️ Step 7: Render Hallucination & Grounding Audit Badge
+    conf_score = audit_res["confidence_score"]
+    badge_icon = "🟢" if conf_score >= 85 else "🟡" if conf_score >= 70 else "🔴"
+    status_label = "High Confidence — Source Grounded" if conf_score >= 85 else "Moderate Confidence — Review Citations" if conf_score >= 70 else "Low Confidence — Potential Hallucinations Detected"
 
     st.markdown("---")
-    st.subheader("📚 Referenced Cases")
-    for m in metadatas:
-        st.markdown(
-            f"**[{m['case_name']}]({m['url']})** — {m['verdict_summary'][:250]}…"
+    st.subheader(f"🛡️ Source Grounding & Hallucination Audit {badge_icon}")
+    
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("Grounding Confidence", f"{conf_score:.1f}%", help="Calculated based on citation validity, constitutional article existence, and sentence n-gram source overlap.")
+    col_m2.metric("Supported Sources", ", ".join(audit_res["supported_sources"]) if audit_res["supported_sources"] else "None Identified")
+    col_m3.metric("Verified Authorities", f"{len(audit_res['verified_authorities'])} Cited")
+
+    # Display detected issues if any
+    if audit_res["issues_detected"]:
+        for issue in audit_res["issues_detected"]:
+            st.warning(f"⚠️ {issue}")
+
+    # Display potential unsupported statements if any
+    if audit_res["potential_unsupported_statements"]:
+        for unsupp in audit_res["potential_unsupported_statements"]:
+            st.info(f"ℹ️ **Statement requiring verification:** *\"{unsupp}\"*")
+
+    st.markdown("---")
+
+    # 📚 Step 8: Display Structured Citation Authorities
+    st.subheader("📚 Referenced Legal Authorities (Retrieved & Reranked)")
+    for i, c in enumerate(top_candidates, 1):
+        badge = (
+            "📜 Constitutional Article" if c["doc_type"] == "constitutional_article"
+            else "📌 Ratio Decidendi Chunk" if c["doc_type"] == "ratio_chunk"
+            else "⚖️ Landmark Precedent"
         )
+        cross_sc = c.get("cross_score", 0.0)
+        meta_boost = c.get("meta_boost", 0.0)
+        graph_boost = c.get("graph_boost", 0.0)
+        final_sc = c.get("final_score", 0.0)
+        
+        st.markdown(
+            f"**{i}. [{c['title']}]({c.get('url', '#')})** — `{c.get('citation', '')}` ({c.get('court', '')}, {c.get('year', '')})  \n"
+            f"*{badge}* • **Final Score:** `{final_sc:.4f}` (Cross-Encoder: `{cross_sc:.3f}` | Meta Boost: `+{meta_boost:.2f}` | Graph Boost: `+{graph_boost:.2f}`)"
+        )
+
+    # 🛠️ Step 9: Advanced Diagnostics Expander
+    with st.expander("🛠️ Advanced Retrieval & Observability Diagnostics", expanded=False):
+        col_diag1, col_diag2 = st.columns(2)
+        with col_diag1:
+            st.write(f"**Query Class:** `{cls_res['primary_class']}`")
+            st.write(f"**Candidate Pool Size:** `{candidate_pool_size}` unique documents")
+            st.write(f"**Dense/BM25 Candidate Overlap:** `{overlap_pct:.1f}%`")
+            st.write(f"**Total Retrieval Latency:** `{timings.get('total_pipeline_ms', 0):.2f} ms`")
+        with col_diag2:
+            st.write("**Stage Latency Breakdown (ms):**")
+            st.json({k: round(v, 2) for k, v in timings.items()})
+
+        if graph_insights and graph_insights.get("connected_nodes"):
+            st.write("**1-Hop Knowledge Graph Traversals:**")
+            for nid, node_meta in list(graph_insights["connected_nodes"].items())[:6]:
+                st.write(f"- `[{node_meta['relation']}]` ➔ **{node_meta['name']}** ({node_meta['type']})")
+
+        st.text_area("Exact Structured Prompt Sent to LLM", full_prompt, height=220, disabled=True)
 
 # 🕘 Sidebar History
 with st.sidebar:
-    st.header("🕘 Chat History")
+    st.header("🕘 Query History")
     for msg in st.session_state.history[::-1]:
         role = "👤 User" if msg["role"] == "user" else "⚖️ LawBot"
-        st.markdown(f"**{role}:** {msg['content'][:180]}…")
+        st.markdown(f"**{role}:** {msg['content'][:140]}…")
