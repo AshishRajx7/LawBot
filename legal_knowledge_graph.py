@@ -1,7 +1,7 @@
 # legal_knowledge_graph.py — Constitutional Knowledge Graph Traversal Engine
 import json
 import os
-from typing import List, Dict, Any, Set, Tuple
+from typing import List, Dict, Any, Set, Tuple, Optional
 
 KG_PATH = "data/legal_knowledge_graph.json"
 
@@ -73,8 +73,10 @@ class LegalKnowledgeGraph:
         if norm_art in self.nodes and norm_art not in matched:
             matched.append(norm_art)
             
+        q_norm = q.replace("colour", "color")
         for name, nid in self.name_to_id.items():
-            if q in name or name in q:
+            name_norm = name.replace("colour", "color")
+            if q in name or name in q or q_norm in name_norm or name_norm in q_norm:
                 if nid not in matched:
                     matched.append(nid)
         return matched
@@ -237,6 +239,38 @@ class LegalKnowledgeGraph:
                             est_cases.append(tgt)
                 establishing_map[nid] = est_cases
         return establishing_map
+
+    def get_canonical_authority_for_doctrine(self, doctrine_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Returns the primary establishing case node for a doctrine, or None if unknown.
+        Returns dict with {"id": case_id, "name": case_name, "citation": citation, ...}
+        """
+        matched_nids = self.find_node_id(doctrine_name)
+        for nid in matched_nids:
+            if self.nodes.get(nid, {}).get("type") == "Doctrine":
+                for rel, tgt in self.adjacency.get(nid, []):
+                    if rel in ("REV_ESTABLISHES", "ESTABLISHES"):
+                        tgt_node = self.nodes.get(tgt)
+                        if tgt_node and tgt_node.get("type") == "Case":
+                            return tgt_node
+        return None
+
+    def get_canonical_authorities_for_doctrine(self, doctrine_name: str) -> List[Dict[str, Any]]:
+        """
+        Returns all establishing case nodes for a doctrine.
+        """
+        authorities = []
+        matched_nids = self.find_node_id(doctrine_name)
+        seen_ids = set()
+        for nid in matched_nids:
+            if self.nodes.get(nid, {}).get("type") == "Doctrine":
+                for rel, tgt in self.adjacency.get(nid, []):
+                    if rel in ("REV_ESTABLISHES", "ESTABLISHES"):
+                        tgt_node = self.nodes.get(tgt)
+                        if tgt_node and tgt_node.get("type") == "Case" and tgt not in seen_ids:
+                            seen_ids.add(tgt)
+                            authorities.append(tgt_node)
+        return authorities
 
     def get_doctrine_linked_cases(self, doctrines: List[str], max_hops: int = 2) -> Set[str]:
         """

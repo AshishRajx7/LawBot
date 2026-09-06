@@ -2,8 +2,8 @@
   "metadata": {
     "version": "1.0",
     "name": "Indian Constitutional Law Knowledge Graph",
-    "node_count": 77,
-    "edge_count": 58
+    "node_count": 79,
+    "edge_count": 61
   },
   "nodes": [
     {
@@ -492,6 +492,19 @@
       "name": "99th Constitutional Amendment Act (NJAC), 2014",
       "type": "Amendment",
       "year": 2014
+    },
+    {
+      "id": "case_050",
+      "name": "State of Bihar v. Kameshwar Singh",
+      "type": "Case",
+      "year": 1952,
+      "citation": "AIR 1952 SC 252"
+    },
+    {
+      "id": "doc_colorable_legislation",
+      "name": "Colorable Legislation Doctrine",
+      "type": "Doctrine",
+      "label": "Doctrine of Colorable Legislation"
     }
   ],
   "edges": [
@@ -784,6 +797,21 @@
       "source": "art_352",
       "relation": "CONNECTED_TO",
       "target": "art_356"
+    },
+    {
+      "source": "case_050",
+      "relation": "ESTABLISHES",
+      "target": "doc_colorable_legislation"
+    },
+    {
+      "source": "case_009",
+      "relation": "ESTABLISHES",
+      "target": "doc_constitutional_morality"
+    },
+    {
+      "source": "case_004",
+      "relation": "ESTABLISHES",
+      "target": "doc_judicial_review"
     }
   ]
 }

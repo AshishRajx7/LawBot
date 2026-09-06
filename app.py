@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 from legal_retriever import LegalRetriever
 from legal_hallucination_detector import LegalHallucinationDetector
+from legal_grounding_engine import build_grounded_generation_prompt, post_process_grounded_answer
 
 # ========== CONFIG ==========
 CHROMA_PATH = "data/chroma_db"
@@ -121,39 +122,13 @@ if query:
     separator = "\n\n" + ("=" * 40) + "\n\n"
     context = separator.join(context_blocks)
 
-    # 🧠 Step 3: Structured Legal Analysis Prompt
-    full_prompt = f"""You are an Indian constitutional law research assistant.
-
-Answer only from the retrieved materials.
-
-For every answer:
-1. State the legal principle.
-2. Cite the relevant constitutional provision.
-3. Cite the relevant cases.
-4. Explain the court's reasoning.
-5. If retrieved materials are insufficient, explicitly say so.
-
-Format your response strictly using the following four sections:
-
-### Legal Principle
-[State the exact legal and constitutional principle established by the authorities]
-
-### Relevant Constitutional Provision
-[Cite the constitutional article and explain its core constitutional mandate]
-
-### Court Reasoning
-[Detail the court's ratio decidendi and rationale from the retrieved sources]
-
-### Authorities Relied Upon
-[List every source cited with its full citation, formatted as:
-1. Case / Article Name, Official Citation (Court, Year)
-2. ...]
-
-Retrieved Materials:
-{context}
-
-Question:
-{query}"""
+    # 🧠 Step 3: Structured Legal Analysis Prompt with Grounding & Contradiction Detection
+    full_prompt, contradiction_warning = build_grounded_generation_prompt(
+        query=query,
+        context=context,
+        top_candidates=top_candidates,
+        cls_res=cls_res
+    )
 
     # ⚖️ Step 4: Generate Grounded Answer via Hugging Face InferenceClient
     with st.spinner("⚖️ Synthesizing legal analysis from retrieved sources..."):
@@ -162,13 +137,19 @@ Question:
                 messages=[
                     {"role": "user", "content": full_prompt},
                 ],
-                max_tokens=750,
+                max_tokens=850,
             )
             choice = response.choices[0]
-            answer = (
+            raw_answer = (
                 choice.message.content
                 if hasattr(choice.message, "content")
                 else choice.message.get("content", "")
+            )
+            answer = post_process_grounded_answer(
+                raw_answer=raw_answer,
+                query=query,
+                top_candidates=top_candidates,
+                contradiction_warning=contradiction_warning
             )
         except Exception as e:
             st.error(f"❌ **LLM API Error**: Failed to generate answer from Hugging Face Inference API: {e}")
@@ -243,6 +224,9 @@ Question:
             st.write("**1-Hop Knowledge Graph Traversals:**")
             for nid, node_meta in list(graph_insights["connected_nodes"].items())[:6]:
                 st.write(f"- `[{node_meta['relation']}]` ➔ **{node_meta['name']}** ({node_meta['type']})")
+
+        if contradiction_warning:
+            st.warning(f"⚠️ **Pre-Generation Contradiction Detected:**\n\n{contradiction_warning}")
 
         st.text_area("Exact Structured Prompt Sent to LLM", full_prompt, height=220, disabled=True)
 

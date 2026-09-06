@@ -111,7 +111,9 @@ class LegalQueryClassifier:
         "nagaraj": "M. Nagaraj v. Union of India",
         "jarnail singh": "Jarnail Singh v. Lachhmi Narain Gupta",
         "sabarimala": "Indian Young Lawyers Association v. State of Kerala",
-        "nalsa": "National Legal Services Authority v. Union of India"
+        "nalsa": "National Legal Services Authority v. Union of India",
+        "kameshwar": "State of Bihar v. Kameshwar Singh",
+        "kameshwar singh": "State of Bihar v. Kameshwar Singh"
     }
 
     def classify(self, query: str) -> Dict[str, Any]:
