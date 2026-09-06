@@ -29,38 +29,81 @@ st.set_page_config(
 st.title("⚖️ LawBot — Indian Constitutional Law Intelligence Assistant")
 st.caption("Next-Generation Constitutional Intelligence: Query Understanding • Knowledge Graph Traversal • Metadata-Aware Fusion • Hallucination Auditing")
 
-# Validate environment variables
-if not HF_TOKEN:
-    st.error("🔑 **API Key Missing**: The `HF_API_KEY` environment variable is not configured. Please set `HF_API_KEY` in your environment or Render settings.")
-    st.stop()
+# Sidebar for API Configuration & History
+with st.sidebar:
+    st.header("⚙️ Configuration")
+    if not HF_TOKEN:
+        user_key = st.text_input(
+            "Hugging Face API Token",
+            type="password",
+            help="Enter your Hugging Face User Access Token (read access) if not set in environment"
+        )
+        if user_key:
+            HF_TOKEN = user_key
 
 # Validate database files on disk
 if not os.path.exists(CHROMA_PATH) or not os.path.exists(BM25_PATH):
-    st.error(f"📁 **Database Files Missing**: Required knowledge-base indexes ('{CHROMA_PATH}', '{BM25_PATH}') were not found. Please run `python embed_cases.py` to build the hybrid index before launching.")
+    st.error(
+        f"📁 **Database Files Missing**: Required knowledge-base indexes ('{CHROMA_PATH}', '{BM25_PATH}') "
+        f"were not found. Ensure `data/chroma_db` and `data/bm25_index.json` are committed to your repository."
+    )
     st.stop()
 
-# ========== INITIALIZE ENGINES (CACHED ONCE AT STARTUP) ==========
+# ========== INITIALIZE ENGINES (CACHED & LAZY-LOADED) ==========
 @st.cache_resource(show_spinner=False)
-def init_retrieval_and_audit_engines():
-    """Load persistent hybrid retriever, knowledge graph, and hallucination auditor"""
+def get_retriever(rerank_model: str):
+    """Load persistent hybrid retriever, knowledge graph, and vector store."""
+    return LegalRetriever(rerank_model=rerank_model)
+
+@st.cache_resource(show_spinner=False)
+def get_detector():
+    """Load hallucination and source grounding detector."""
+    return LegalHallucinationDetector()
+
+@st.cache_resource(show_spinner=False)
+def get_llm(token: str):
+    """Initialize Hugging Face InferenceClient."""
+    return InferenceClient(model=CHAT_MODEL, token=token)
+
+# Suppress Chroma telemetry
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
+# Startup status wrapper allows Streamlit to respond to health probes while warming engines
+with st.status("⚙️ Initializing LawBot Intelligence Engines...", expanded=False) as status:
+    st.write("Loading hybrid vector store (ChromaDB) and BM25 index...")
     try:
-        retriever = LegalRetriever(rerank_model=RERANK_MODEL)
-        detector = LegalHallucinationDetector()
-        return retriever, detector, None
+        retriever = get_retriever(RERANK_MODEL)
+        st.write("✓ Hybrid retriever ready")
     except Exception as e:
-        return None, None, f"Engine initialization failed: {e}"
+        if status is not None:
+            status.update(label="❌ Failed to initialize retriever", state="error", expanded=True)
+        st.error(f"Retriever initialization error: {e}")
+        st.stop()
 
-@st.cache_resource(show_spinner=False)
-def init_llm():
-    """Initialize LLM model client"""
-    return InferenceClient(model=CHAT_MODEL, token=HF_TOKEN)
+    st.write("Loading legal hallucination detection & grounding engine...")
+    try:
+        detector = get_detector()
+        st.write("✓ Hallucination detector ready")
+    except Exception as e:
+        if status is not None:
+            status.update(label="❌ Failed to initialize detector", state="error", expanded=True)
+        st.error(f"Detector initialization error: {e}")
+        st.stop()
 
-retriever, detector, init_err = init_retrieval_and_audit_engines()
-if init_err:
-    st.error(f"❌ **Engine Initialization Error**: {init_err}")
-    st.stop()
+    if HF_TOKEN:
+        st.write("Connecting to Hugging Face Inference API...")
+        try:
+            llm = get_llm(HF_TOKEN)
+            st.write("✓ LLM client ready")
+        except Exception as e:
+            llm = None
+            st.write(f"⚠️ LLM connection notice: {e}")
+    else:
+        llm = None
+        st.write("ℹ️ `HF_API_KEY` not configured. Retrieval & audit will work; answer generation requires key.")
 
-llm = init_llm()
+    if status is not None:
+        status.update(label="✅ LawBot Intelligence Engines Ready", state="complete", expanded=False)
 
 # ========== CHAT UI & SESSION STATE ==========
 st.markdown("💬 Ask any constitutional law question (e.g., *What is Article 21?*, *Which case established substantive due process?*, *What is the basic structure doctrine?*)")
@@ -131,6 +174,10 @@ if query:
     )
 
     # ⚖️ Step 4: Generate Grounded Answer via Hugging Face InferenceClient
+    if llm is None:
+        st.error("🔑 **Hugging Face API Key Required**: Please provide your `HF_API_KEY` in the sidebar or configure it in Render environment settings to generate legal answers.")
+        st.stop()
+
     with st.spinner("⚖️ Synthesizing legal analysis from retrieved sources..."):
         try:
             response = llm.chat_completion(

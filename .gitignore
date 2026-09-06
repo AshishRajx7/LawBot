@@ -3,4 +3,3 @@
 __pycache__/
 scratch/
 retrieval_logs/
-data/chroma_db/

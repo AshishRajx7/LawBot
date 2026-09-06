@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: lawbot
+    runtime: python
+    plan: free
+    buildCommand: "chmod +x render_build.sh && ./render_build.sh"
+    startCommand: "streamlit run app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true --browser.gatherUsageStats false"
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.10
+      - key: STREAMLIT_SERVER_HEADLESS
+        value: "true"
+      - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+        value: "false"
+      - key: STREAMLIT_SERVER_PORT
+        value: "10000"
+      - key: HF_API_KEY
+        sync: false

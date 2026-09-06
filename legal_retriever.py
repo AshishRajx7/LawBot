@@ -1,5 +1,7 @@
 # legal_retriever.py — Production Metadata-Aware Hybrid Legal Retrieval Engine
 import os
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
 import re
 import json
 import time
@@ -36,7 +38,14 @@ class LegalRetriever:
         self.kg = LegalKnowledgeGraph()
         
         # 2. Vector Store
-        self.client = chromadb.PersistentClient(path=CHROMA_PATH)
+        try:
+            from chromadb.config import Settings
+            self.client = chromadb.PersistentClient(
+                path=CHROMA_PATH,
+                settings=Settings(anonymized_telemetry=False)
+            )
+        except Exception:
+            self.client = chromadb.PersistentClient(path=CHROMA_PATH)
         self.vector_db = self.client.get_collection(COLLECTION_NAME)
 
         # 3. BM25
@@ -61,9 +70,13 @@ class LegalRetriever:
                 "url": meta.get("url", "#"),
             }
 
-        # 4. FlashRank Cross-Encoder
+        # 4. FlashRank Cross-Encoder (Fault-tolerant initialization)
         self.rerank_model = rerank_model
-        self.ranker = Ranker(model_name=rerank_model, max_length=256)
+        try:
+            self.ranker = Ranker(model_name=rerank_model, max_length=256)
+        except Exception as e:
+            print(f"[WARNING] FlashRank ranker initialization failed: {e}. Falling back to dense similarity.")
+            self.ranker = None
 
     def _tokenize_text(self, text: str) -> List[str]:
         clean = re.sub(r"[^\w\s-]", " ", text.lower())
@@ -241,9 +254,17 @@ class LegalRetriever:
             passage_text = f"[{c['title']} | Citation: {c['citation']} | Provision: {c['primary_article']}]\n{c['content'][:1200]}"
             passages.append({"id": c["doc_id"], "text": passage_text})
 
-        rerank_req = RerankRequest(query=query, passages=passages)
-        rerank_results = self.ranker.rerank(rerank_req)
-        score_map = {r["id"]: float(r["score"]) for r in rerank_results}
+        score_map = {}
+        if self.ranker is not None and passages:
+            try:
+                rerank_req = RerankRequest(query=query, passages=passages)
+                rerank_results = self.ranker.rerank(rerank_req)
+                score_map = {r["id"]: float(r["score"]) for r in rerank_results}
+            except Exception as e:
+                print(f"[WARNING] FlashRank rerank failed: {e}. Falling back to dense similarity.")
+                score_map = {c["doc_id"]: c.get("dense_sim", 0.0) for c in candidates}
+        else:
+            score_map = {c["doc_id"]: c.get("dense_sim", 0.0) for c in candidates}
         timings["reranking_ms"] = (time.perf_counter() - t0) * 1000
 
         # --- Stage 7: Metadata-Aware Weighted Fusion & Doctrine-First Boosting (Tasks 2, 4) ---
