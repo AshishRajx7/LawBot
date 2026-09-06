@@ -158,6 +158,142 @@ class LegalKnowledgeGraph:
         
         return boosts
 
+    def get_candidate_expansions(
+        self,
+        detected_articles: List[str] = None,
+        detected_cases: List[str] = None,
+        detected_doctrines: List[str] = None,
+        max_hops: int = 2,
+        max_expansions: int = 10
+    ) -> List[str]:
+        """
+        Performs bounded BFS (up to max_hops) from detected legal entities
+        and returns connected case and article node IDs, prioritized by
+        authoritative legal relationship (ESTABLISHES, EXPANDS, RELIES_ON, etc.).
+        """
+        seed_entities = (detected_doctrines or []) + (detected_cases or []) + (detected_articles or [])
+        seed_nodes = []
+        for ent in seed_entities:
+            for nid in self.find_node_id(ent):
+                if nid not in seed_nodes:
+                    seed_nodes.append(nid)
+
+        visited = set(seed_nodes)
+        current_level = list(seed_nodes)
+        ordered_expansions = []
+
+        rel_priority = {
+            "REV_ESTABLISHES": 1,
+            "ESTABLISHES": 1,
+            "REV_EXPANDS": 2,
+            "EXPANDS": 2,
+            "LIMITS": 2,
+            "REV_LIMITS": 2,
+            "REV_RELIES_ON": 3,
+            "RELIES_ON": 3,
+            "INTERPRETS": 3,
+            "REV_INTERPRETS": 3,
+            "CONNECTED_TO": 4,
+            "REV_CONNECTED_TO": 4,
+            "OVERRULES": 5,
+            "REV_OVERRULES": 5,
+        }
+
+        for hop in range(1, max_hops + 1):
+            next_candidates = []
+            for nid in current_level:
+                for rel, tgt in self.adjacency.get(nid, []):
+                    if tgt not in visited:
+                        visited.add(tgt)
+                        prio = rel_priority.get(rel, 9)
+                        next_candidates.append((prio, tgt))
+
+            next_candidates.sort(key=lambda x: x[0])
+            next_level = []
+            for prio, tgt in next_candidates:
+                next_level.append(tgt)
+                node_type = self.nodes.get(tgt, {}).get("type", "")
+                if node_type in ("Case", "Article", "Amendment"):
+                    if tgt not in ordered_expansions:
+                        ordered_expansions.append(tgt)
+                        if len(ordered_expansions) >= max_expansions:
+                            return ordered_expansions[:max_expansions]
+            current_level = next_level
+
+        return ordered_expansions[:max_expansions]
+
+    def get_doctrine_establishing_cases(self, doctrines: List[str]) -> Dict[str, List[str]]:
+        """
+        Returns mapping from doctrine node IDs to the cases that establish them (ESTABLISHES relation).
+        """
+        establishing_map = {}
+        for doc in (doctrines or []):
+            for nid in self.find_node_id(doc):
+                est_cases = []
+                for rel, tgt in self.adjacency.get(nid, []):
+                    if rel in ("REV_ESTABLISHES", "ESTABLISHES"):
+                        tgt_node = self.nodes.get(tgt, {})
+                        if tgt_node.get("type") == "Case":
+                            est_cases.append(tgt)
+                establishing_map[nid] = est_cases
+        return establishing_map
+
+    def get_doctrine_linked_cases(self, doctrines: List[str], max_hops: int = 2) -> Set[str]:
+        """
+        Returns all case IDs connected to the specified doctrines within max_hops.
+        """
+        linked_cases = set()
+        for doc in (doctrines or []):
+            for nid in self.find_node_id(doc):
+                curr = {nid}
+                visited = {nid}
+                for hop in range(1, max_hops + 1):
+                    nxt = set()
+                    for c_id in curr:
+                        for rel, tgt in self.adjacency.get(c_id, []):
+                            if tgt not in visited:
+                                visited.add(tgt)
+                                nxt.add(tgt)
+                                if self.nodes.get(tgt, {}).get("type") == "Case":
+                                    linked_cases.add(tgt)
+                    curr = nxt
+        return linked_cases
+
+    def get_query_expansion_terms(
+        self,
+        detected_doctrines: List[str] = None,
+        detected_cases: List[str] = None,
+        detected_articles: List[str] = None,
+        max_terms: int = 5
+    ) -> List[str]:
+        """
+        Extracts concise canonical authority terms (case short names, article numbers)
+        from 1- and 2-hop connected graph nodes to enrich dense and lexical query strings.
+        """
+        expansions = self.get_candidate_expansions(
+            detected_articles=detected_articles,
+            detected_cases=detected_cases,
+            detected_doctrines=detected_doctrines,
+            max_hops=2,
+            max_expansions=max_terms * 2
+        )
+        terms = []
+        for nid in expansions:
+            node = self.nodes.get(nid, {})
+            name = node.get("name", "")
+            if not name:
+                continue
+            if node.get("type") == "Case":
+                short_name = name.split(" v. ")[0].split(" versus ")[0].strip()
+                if short_name and short_name not in terms:
+                    terms.append(short_name)
+            elif node.get("type") == "Article":
+                if name not in terms:
+                    terms.append(name)
+            if len(terms) >= max_terms:
+                break
+        return terms[:max_terms]
+
 if __name__ == "__main__":
     kg = LegalKnowledgeGraph()
     print("=== LegalKnowledgeGraph Sanity Test ===")

@@ -124,6 +124,8 @@ class LegalQueryClassifier:
         detected_articles = []
         for m in self.ARTICLE_PATTERN.finditer(query):
             detected_articles.append(f"Article {m.group(1).upper()}")
+        if "right to property" in q_lower or "property right" in q_lower:
+            detected_articles.append("Article 300A")
 
         detected_doctrines = []
         for term, doctrine in self.DOCTRINES.items():

@@ -92,5 +92,44 @@ class TestLegalKnowledgeGraph(unittest.TestCase):
         self.assertIn("case_002", boosts)
         self.assertGreater(boosts["case_002"], 0.0)
 
+    def test_get_candidate_expansions(self):
+        # Bounded BFS expansion prioritizing ESTABLISHES/EXPANDS relations
+        expansions = self.kg.get_candidate_expansions(
+            detected_doctrines=["Basic Structure Doctrine"],
+            max_hops=2,
+            max_expansions=10
+        )
+        self.assertIsInstance(expansions, list)
+        self.assertLessEqual(len(expansions), 10)
+        # Kesavananda Bharati (case_004) establishes Basic Structure Doctrine, so it must be present and top-ranked
+        self.assertIn("case_004", expansions)
+        self.assertEqual(expansions[0], "case_004", "ESTABLISHES relation must have highest priority in candidate expansion")
+
+    def test_get_doctrine_establishing_cases(self):
+        # Direct lookup of case nodes that establish specific doctrines
+        est_map = self.kg.get_doctrine_establishing_cases(["Basic Structure Doctrine"])
+        self.assertIn("doc_basic_structure", est_map)
+        self.assertIn("case_004", est_map["doc_basic_structure"])
+
+        # Substantive due process established by Maneka Gandhi (case_002)
+        est_map_due_process = self.kg.get_doctrine_establishing_cases(["Substantive Due Process"])
+        self.assertIn("doc_due_process", est_map_due_process)
+        self.assertIn("case_002", est_map_due_process["doc_due_process"])
+
+    def test_get_doctrine_linked_cases(self):
+        # 2-hop traversal of all cases connected to a doctrine
+        linked = self.kg.get_doctrine_linked_cases(["Basic Structure Doctrine"], max_hops=2)
+        self.assertIn("case_004", linked, "Kesavananda Bharati must be linked")
+        self.assertIn("case_005", linked, "Minerva Mills must be linked")
+
+    def test_get_query_expansion_terms(self):
+        # Concise query expansion terms for dense & lexical search
+        terms = self.kg.get_query_expansion_terms(
+            detected_doctrines=["Basic Structure Doctrine"],
+            max_terms=4
+        )
+        self.assertLessEqual(len(terms), 4)
+        self.assertIn("Kesavananda Bharati", terms, "Expansion terms must include establishing case short name")
+
 if __name__ == "__main__":
     unittest.main()

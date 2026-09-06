@@ -38,7 +38,7 @@ class LegalRetrievalPipeline:
         with open(BM25_PATH, "r", encoding="utf-8") as f:
             self.bm25_data = json.load(f)
         self.bm25 = BM25Okapi(self.bm25_data["tokenized_corpus"])
-        self.ranker = Ranker(model_name="ms-marco-MiniLM-L-12-v2")
+        self.ranker = Ranker(model_name="ms-marco-TinyBERT-L-2-v2")
 
     def retrieve_vector_only(self, query: str, top_k: int = 5):
         target_art = detect_article(query)

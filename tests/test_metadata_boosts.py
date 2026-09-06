@@ -86,5 +86,42 @@ class TestMetadataBoosts(unittest.TestCase):
         boosted_found = any(d["meta_boost"] >= 0.05 for d in res["top_results"])
         self.assertTrue(boosted_found, "General legal question must apply broad constitutional relevance boost")
 
+    def test_class_bonus_additive(self):
+        # Task 4: Additive Class-Specific Bonuses
+        # 1. Constitutional Provision Query: class_bonus = 0.15 * bm25_sim
+        prov_res = self.retriever.retrieve("What is Article 21 of the Indian Constitution?", top_k=5)
+        top_prov = prov_res["top_results"][0]
+        self.assertAlmostEqual(top_prov["class_bonus"], 0.15 * top_prov["bm25_sim"], places=4)
+
+        # 2. Landmark Case Query: class_bonus = 0.15 * dense_sim
+        case_res = self.retriever.retrieve("What did the Supreme Court hold in Kesavananda Bharati?", top_k=5)
+        top_case = case_res["top_results"][0]
+        self.assertAlmostEqual(top_case["class_bonus"], 0.15 * top_case["dense_sim"], places=4)
+
+    def test_doctrine_establishes_boost_and_distractor_suppression(self):
+        # Tasks 1, 2, 4 Verification Query:
+        # "Did Maneka Gandhi establish the Basic Structure Doctrine?"
+        query = "Did Maneka Gandhi establish the Basic Structure Doctrine?"
+        res = self.retriever.retrieve(query, top_k=5)
+        
+        self.assertEqual(res["classification"]["primary_class"], "Doctrine Query")
+        self.assertIn("Basic Structure Doctrine", res["classification"]["detected_doctrines"])
+        self.assertIn("Maneka Gandhi v. Union of India", res["classification"]["detected_cases"])
+
+        # Check that Kesavananda Bharati is in the top results (specifically Top-1 or Top-2)
+        top_titles = [d["title"] for d in res["top_results"][:2]]
+        kesavananda_in_top = any("Kesavananda Bharati" in t for t in top_titles)
+        self.assertTrue(kesavananda_in_top, f"Kesavananda Bharati must be in Top 2 results. Got: {top_titles}")
+
+        # Check that establishing case received explicit ESTABLISHES boost (>= 0.35)
+        kb_docs = [d for d in res["top_results"] if "Kesavananda Bharati" in d["title"]]
+        self.assertTrue(len(kb_docs) > 0)
+        self.assertGreaterEqual(kb_docs[0]["meta_boost"], 0.35, "Establishing case must receive >= 0.35 meta boost")
+
+        # Check that distractor case (Maneka Gandhi) graph boost was suppressed to 0.0
+        mg_docs = [d for d in res["top_results"] if "Maneka Gandhi" in d["title"]]
+        if mg_docs:
+            self.assertLessEqual(mg_docs[0]["graph_boost"], 0.0, "Unrelated case graph boost must be suppressed in doctrine query")
+
 if __name__ == "__main__":
     unittest.main()

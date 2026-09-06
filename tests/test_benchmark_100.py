@@ -112,6 +112,7 @@ BENCHMARK_SUITE = [
     {"id": "BS_06", "category": "Basic Structure", "query": "What cut-off date was established for Ninth Schedule judicial review in Waman Rao?", "target_ids": ["case_028"], "target_keywords": ["waman rao", "april 24, 1973"]},
     {"id": "BS_07", "category": "Basic Structure", "query": "Can laws inserted into the Ninth Schedule after April 24, 1973 be challenged?", "target_ids": ["case_029", "case_029_ratio_01"], "target_keywords": ["i.r. coelho", "ninth schedule"]},
     {"id": "BS_08", "category": "Basic Structure", "query": "What core constitutional features constitute the basic structure?", "target_ids": ["case_004", "case_005"], "target_keywords": ["kesavananda", "minerva mills"]},
+    {"id": "BS_09", "category": "Basic Structure", "query": "Did Maneka Gandhi establish the Basic Structure Doctrine?", "target_ids": ["case_004", "case_004_ratio_01", "case_004_ratio_02"], "target_keywords": ["kesavananda", "basic structure"]},
 
     # 10. Free Speech (8 queries)
     {"id": "FS_01", "category": "Free Speech", "query": "Why was Section 66A of the Information Technology Act struck down?", "target_ids": ["case_010", "case_010_ratio_01"], "target_keywords": ["shreya singhal", "66a"]},
