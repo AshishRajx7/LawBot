@@ -29,7 +29,7 @@ def main():
     available = detect_available_providers()
     print("\n[1] Environment API Key Status:")
     for prov_id, key in available.items():
-        status = "✅ Configured (" + key[:6] + "..." + key[-3:] + ")" if key else "❌ Not set"
+        status = "✅ Configured (Protected)" if key else "❌ Not set"
         print(f"  • {PROVIDERS_CONFIG[prov_id]['name']}: {status}")
 
     # 2. Determine default

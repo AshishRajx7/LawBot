@@ -73,7 +73,7 @@ with st.sidebar:
             help=f"Default model for {provider_cfg['name']}: {provider_cfg['default_model']}"
         )
 
-    # API Key resolution from env or user input
+    # API Key resolution from env or user input (Never leak server env secrets to client DOM)
     env_keys = provider_cfg.get("env_keys", [])
     found_env_key = None
     for k in env_keys:
@@ -82,13 +82,25 @@ with st.sidebar:
             found_env_key = val
             break
 
-    user_key = st.text_input(
-        f"{provider_cfg['name']} API Key",
-        value=found_env_key if found_env_key else "",
-        type="password",
-        help=f"Resolved automatically from {', '.join(env_keys)} if configured, or enter here."
-    )
-    active_key = user_key.strip() if user_key else found_env_key
+    if found_env_key:
+        st.success(f"🔒 {provider_cfg['name']} key loaded securely from server environment")
+        user_override = st.text_input(
+            f"Override {provider_cfg['name']} Key (Optional)",
+            value="",
+            type="password",
+            placeholder="Using server environment key",
+            help="Leave blank to use the secure server environment key. Enter a custom key only if you wish to override it."
+        )
+        active_key = user_override.strip() if user_override.strip() else found_env_key
+    else:
+        user_key = st.text_input(
+            f"{provider_cfg['name']} API Key",
+            value="",
+            type="password",
+            placeholder=f"Enter {provider_cfg['name']} key...",
+            help=f"Configure {provider_cfg['env_keys'][0]} in your environment or enter here."
+        )
+        active_key = user_key.strip() if user_key.strip() else None
 
     # Help links for obtaining API keys
     signup_url = provider_cfg.get("signup_url")
