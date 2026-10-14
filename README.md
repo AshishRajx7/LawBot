@@ -303,17 +303,31 @@ Windows:
 pip install -r requirements.txt
 ```
 
-## Configure Hugging Face API
+## Configure LLM Provider API
 
-Create a `.env` file:
+LawBot supports plug-and-play multi-provider inference with auto-failover, 24-hour response caching, and session rate-limiting:
 
-```env
-HF_API_KEY=your_huggingface_token
-```
+| Provider | Model | Free Tier Available? | API Key Setup |
+| :--- | :--- | :--- | :--- |
+| **⚡ Groq (Recommended)** | `llama-3.1-8b-instant` | ✅ **Yes (14,400 req/day)** | [console.groq.com/keys](https://console.groq.com/keys) (`GROQ_API_KEY`) |
+| **🤗 Hugging Face** | `Llama-3.1-8B-Instruct` | ❌ Requires pre-paid credits | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) (`HF_API_KEY`) |
+| **🌐 OpenRouter** | `llama-3.1-8b-instruct:free` | ✅ **Yes (Free models)** | [openrouter.ai/keys](https://openrouter.ai/keys) (`OPENROUTER_API_KEY`) |
+| **✨ Google Gemini** | `gemini-1.5-flash` | ✅ **Yes (AI Studio)** | [aistudio.google.com](https://aistudio.google.com/app/apikey) (`GEMINI_API_KEY`) |
 
-## Run Application
+To configure, copy `.env.example` to `.env` and configure your preferred provider key:
 
 ```bash
+cp .env.example .env
+# Edit .env and paste your GROQ_API_KEY or other provider key
+```
+
+## Run Diagnostics & Application
+
+```bash
+# Verify your LLM connection via CLI
+python test_llm.py
+
+# Launch the Streamlit application
 streamlit run app.py
 ```
 

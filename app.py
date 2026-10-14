@@ -3,22 +3,31 @@ import os
 import time
 import json
 import streamlit as st
-from huggingface_hub import InferenceClient
 from dotenv import load_dotenv
 
 from legal_retriever import LegalRetriever
 from legal_hallucination_detector import LegalHallucinationDetector
 from legal_grounding_engine import build_grounded_generation_prompt, post_process_grounded_answer
+from legal_llm_client import (
+    PROVIDERS_CONFIG,
+    detect_available_providers,
+    detect_default_provider,
+    get_friendly_error_message,
+    generate_chat_completion,
+    LLMException,
+    LLMQuotaExhaustedError,
+    LLMRateLimitError,
+    LLMAuthError,
+)
 
 # ========== CONFIG ==========
 CHROMA_PATH = "data/chroma_db"
 BM25_PATH = "data/bm25_index.json"
-CHAT_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 RERANK_MODEL = os.getenv("RERANK_MODEL", "ms-marco-TinyBERT-L-2-v2")
+MAX_SESSION_QUERIES = 25
 
 # Load environment variables
 load_dotenv()
-HF_TOKEN = os.getenv("HF_API_KEY")
 
 # ========== PAGE CONFIG & INITIAL HEALTH CHECKS ==========
 st.set_page_config(
@@ -29,17 +38,79 @@ st.set_page_config(
 st.title("⚖️ LawBot — Indian Constitutional Law Intelligence Assistant")
 st.caption("Next-Generation Constitutional Intelligence: Query Understanding • Knowledge Graph Traversal • Metadata-Aware Fusion • Hallucination Auditing")
 
-# Sidebar for API Configuration & History
+# Sidebar for API Configuration & Session Management
 with st.sidebar:
-    st.header("⚙️ Configuration")
-    if not HF_TOKEN:
-        user_key = st.text_input(
-            "Hugging Face API Token",
-            type="password",
-            help="Enter your Hugging Face User Access Token (read access) if not set in environment"
+    st.header("⚙️ LLM Provider & Settings")
+
+    provider_options = list(PROVIDERS_CONFIG.keys())
+    provider_labels = {k: PROVIDERS_CONFIG[k]["display_name"] for k in provider_options}
+
+    # Auto-detect default provider based on configured environment variables
+    default_prov, default_key = detect_default_provider()
+    default_idx = provider_options.index(default_prov) if default_prov in provider_options else 0
+
+    selected_provider = st.selectbox(
+        "Inference Provider",
+        options=provider_options,
+        index=default_idx,
+        format_func=lambda x: provider_labels.get(x, x),
+        help="Select your LLM inference provider. Groq is recommended for fast, 100% free synthesis."
+    )
+
+    provider_cfg = PROVIDERS_CONFIG[selected_provider]
+
+    # Model selection
+    supported_models = provider_cfg.get("supported_models", [provider_cfg["default_model"]])
+    if selected_provider == "custom":
+        active_model = st.text_input("Model Identifier", value=provider_cfg["default_model"])
+        custom_endpoint = st.text_input("Endpoint URL", value=provider_cfg["base_url"])
+        provider_cfg["base_url"] = custom_endpoint
+    else:
+        active_model = st.selectbox(
+            "Model",
+            options=supported_models,
+            index=0,
+            help=f"Default model for {provider_cfg['name']}: {provider_cfg['default_model']}"
         )
-        if user_key:
-            HF_TOKEN = user_key
+
+    # API Key resolution from env or user input
+    env_keys = provider_cfg.get("env_keys", [])
+    found_env_key = None
+    for k in env_keys:
+        val = os.getenv(k, "").strip()
+        if val:
+            found_env_key = val
+            break
+
+    user_key = st.text_input(
+        f"{provider_cfg['name']} API Key",
+        value=found_env_key if found_env_key else "",
+        type="password",
+        help=f"Resolved automatically from {', '.join(env_keys)} if configured, or enter here."
+    )
+    active_key = user_key.strip() if user_key else found_env_key
+
+    # Help links for obtaining API keys
+    signup_url = provider_cfg.get("signup_url")
+    if signup_url:
+        if provider_cfg.get("is_free"):
+            st.markdown(f"👉 **[Get Free {provider_cfg['name']} Key]({signup_url})** *(No credit card required)*")
+        else:
+            st.markdown(f"👉 **[{provider_cfg['name']} Billing & Keys]({signup_url})**")
+
+    if provider_cfg.get("notes"):
+        st.caption(f"💡 {provider_cfg['notes']}")
+
+    st.divider()
+
+    # Session Rate Limiter & Cache Observability
+    if "session_queries" not in st.session_state:
+        st.session_state.session_queries = 0
+
+    st.markdown(f"📊 **Session Query Limit:** `{st.session_state.session_queries} / {MAX_SESSION_QUERIES}`")
+    if st.button("🧹 Clear Response Cache", help="Clear cached responses to force fresh LLM synthesis"):
+        st.cache_data.clear()
+        st.success("Response cache cleared!")
 
 # Validate database files on disk
 if not os.path.exists(CHROMA_PATH) or not os.path.exists(BM25_PATH):
@@ -60,10 +131,22 @@ def get_detector():
     """Load hallucination and source grounding detector."""
     return LegalHallucinationDetector()
 
-@st.cache_resource(show_spinner=False)
-def get_llm(token: str):
-    """Initialize Hugging Face InferenceClient."""
-    return InferenceClient(model=CHAT_MODEL, token=token)
+@st.cache_data(show_spinner=False, ttl=86400)
+def synthesize_cached_legal_answer(
+    prompt: str,
+    provider: str,
+    model: str,
+    api_key: str
+) -> str:
+    """Generate answer with query caching (24h TTL) to prevent repeated API credit consumption."""
+    return generate_chat_completion(
+        prompt=prompt,
+        provider=provider,
+        api_key=api_key,
+        model=model,
+        max_tokens=850,
+        temperature=0.2,
+    )
 
 # Suppress Chroma telemetry
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
@@ -90,17 +173,11 @@ with st.status("⚙️ Initializing LawBot Intelligence Engines...", expanded=Fa
         st.error(f"Detector initialization error: {e}")
         st.stop()
 
-    if HF_TOKEN:
-        st.write("Connecting to Hugging Face Inference API...")
-        try:
-            llm = get_llm(HF_TOKEN)
-            st.write("✓ LLM client ready")
-        except Exception as e:
-            llm = None
-            st.write(f"⚠️ LLM connection notice: {e}")
+    prov_title = provider_cfg.get("name", selected_provider)
+    if active_key:
+        st.write(f"✓ LLM client configured via {prov_title} (`{active_model}`)")
     else:
-        llm = None
-        st.write("ℹ️ `HF_API_KEY` not configured. Retrieval & audit will work; answer generation requires key.")
+        st.write(f"ℹ️ {prov_title} API Key not configured. Retrieval & audit ready; synthesis requires key.")
 
     if status is not None:
         status.update(label="✅ LawBot Intelligence Engines Ready", state="complete", expanded=False)
@@ -114,6 +191,15 @@ if "history" not in st.session_state:
 query = st.text_input("Enter your constitutional question:")
 
 if query:
+    # Check session query cap
+    if st.session_state.session_queries >= MAX_SESSION_QUERIES:
+        st.warning(
+            f"🛑 **Demo Usage Limit Reached**: You have reached the limit of {MAX_SESSION_QUERIES} queries for this session. "
+            "Please restart the browser session to continue exploring."
+        )
+        st.stop()
+
+    st.session_state.session_queries += 1
     st.session_state.history.append({"role": "user", "content": query})
 
     # 🔍 Step 1: Execute End-to-End Metadata-Aware Hybrid Retrieval Pipeline
@@ -173,69 +259,73 @@ if query:
         cls_res=cls_res
     )
 
-    # ⚖️ Step 4: Generate Grounded Answer via Hugging Face InferenceClient
-    if llm is None:
-        st.error("🔑 **Hugging Face API Key Required**: Please provide your `HF_API_KEY` in the sidebar or configure it in Render environment settings to generate legal answers.")
-        st.stop()
+    # ⚖️ Step 4: Generate Grounded Answer via Multi-Provider LLM
+    answer = None
+    audit_res = None
 
-    with st.spinner("⚖️ Synthesizing legal analysis from retrieved sources..."):
-        try:
-            response = llm.chat_completion(
-                messages=[
-                    {"role": "user", "content": full_prompt},
-                ],
-                max_tokens=850,
-            )
-            choice = response.choices[0]
-            raw_answer = (
-                choice.message.content
-                if hasattr(choice.message, "content")
-                else choice.message.get("content", "")
-            )
-            answer = post_process_grounded_answer(
-                raw_answer=raw_answer,
-                query=query,
-                top_candidates=top_candidates,
-                contradiction_warning=contradiction_warning
-            )
-        except Exception as e:
-            st.error(f"❌ **LLM API Error**: Failed to generate answer from Hugging Face Inference API: {e}")
-            st.stop()
-
-    st.session_state.history.append({"role": "assistant", "content": answer})
+    if not active_key:
+        st.warning(
+            f"🔑 **{provider_cfg['name']} API Key Required**: Please configure `{provider_cfg['env_keys'][0]}` "
+            f"in your environment settings or enter an API key in the sidebar. "
+            f"Grounded authorities and knowledge graph insights are retrieved below."
+        )
+    else:
+        with st.spinner(f"⚖️ Synthesizing legal analysis with {provider_cfg['name']} ({active_model})..."):
+            try:
+                raw_answer = synthesize_cached_legal_answer(
+                    prompt=full_prompt,
+                    provider=selected_provider,
+                    model=active_model,
+                    api_key=active_key,
+                )
+                answer = post_process_grounded_answer(
+                    raw_answer=raw_answer,
+                    query=query,
+                    top_candidates=top_candidates,
+                    contradiction_warning=contradiction_warning
+                )
+                st.session_state.history.append({"role": "assistant", "content": answer})
+            except LLMException as e:
+                friendly = get_friendly_error_message(e, selected_provider)
+                st.error(f"❌ **{friendly['title']}**\n\n{friendly['message']}\n\n👉 {friendly['action']}")
+            except Exception as e:
+                st.error(f"❌ **LLM Service Notice**: Unable to synthesize answer at this moment: {e}")
 
     # 🛡️ Step 5: Hallucination & Source Grounding Verification
-    with st.spinner("🛡️ Auditing response for factual grounding and citation validity..."):
-        audit_res = detector.audit(answer, top_candidates)
+    if answer:
+        with st.spinner("🛡️ Auditing response for factual grounding and citation validity..."):
+            audit_res = detector.audit(answer, top_candidates)
 
-    # 🧾 Step 6: Render Answer
-    st.subheader("🧠 LawBot’s Legal Analysis")
-    st.markdown(answer)
+        # 🧾 Step 6: Render Answer
+        st.subheader("🧠 LawBot’s Legal Analysis")
+        st.markdown(answer)
 
-    # 🛡️ Step 7: Render Hallucination & Grounding Audit Badge
-    conf_score = audit_res["confidence_score"]
-    badge_icon = "🟢" if conf_score >= 85 else "🟡" if conf_score >= 70 else "🔴"
-    status_label = "High Confidence — Source Grounded" if conf_score >= 85 else "Moderate Confidence — Review Citations" if conf_score >= 70 else "Low Confidence — Potential Hallucinations Detected"
+        # 🛡️ Step 7: Render Hallucination & Grounding Audit Badge
+        conf_score = audit_res["confidence_score"]
+        badge_icon = "🟢" if conf_score >= 85 else "🟡" if conf_score >= 70 else "🔴"
+        status_label = "High Confidence — Source Grounded" if conf_score >= 85 else "Moderate Confidence — Review Citations" if conf_score >= 70 else "Low Confidence — Potential Hallucinations Detected"
 
-    st.markdown("---")
-    st.subheader(f"🛡️ Source Grounding & Hallucination Audit {badge_icon}")
-    
-    col_m1, col_m2, col_m3 = st.columns(3)
-    col_m1.metric("Grounding Confidence", f"{conf_score:.1f}%", help="Calculated based on citation validity, constitutional article existence, and sentence n-gram source overlap.")
-    col_m2.metric("Supported Sources", ", ".join(audit_res["supported_sources"]) if audit_res["supported_sources"] else "None Identified")
-    col_m3.metric("Verified Authorities", f"{len(audit_res['verified_authorities'])} Cited")
+        st.markdown("---")
+        st.subheader(f"🛡️ Source Grounding & Hallucination Audit {badge_icon}")
+        
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric("Grounding Confidence", f"{conf_score:.1f}%", help="Calculated based on citation validity, constitutional article existence, and sentence n-gram source overlap.")
+        col_m2.metric("Supported Sources", ", ".join(audit_res["supported_sources"]) if audit_res["supported_sources"] else "None Identified")
+        col_m3.metric("Verified Authorities", f"{len(audit_res['verified_authorities'])} Cited")
 
-    # Display detected issues if any
-    if audit_res["issues_detected"]:
-        for issue in audit_res["issues_detected"]:
-            st.warning(f"⚠️ {issue}")
+        # Display detected issues if any
+        if audit_res["issues_detected"]:
+            for issue in audit_res["issues_detected"]:
+                st.warning(f"⚠️ {issue}")
 
-    # Display potential unsupported statements if any
-    if audit_res["potential_unsupported_statements"]:
-        for unsupp in audit_res["potential_unsupported_statements"]:
-            st.info(f"ℹ️ **Statement requiring verification:** *\"{unsupp}\"*")
+        # Display potential unsupported statements if any
+        if audit_res["potential_unsupported_statements"]:
+            for unsupp in audit_res["potential_unsupported_statements"]:
+                st.info(f"ℹ️ **Statement requiring verification:** *\"{unsupp}\"*")
 
-    st.markdown("---")
+        st.markdown("---")
+    else:
+        st.info("ℹ️ **Direct Authorities & Precedents**: Explore the retrieved constitutional provisions, ratios, and knowledge graph links below.")
 
     # 📚 Step 8: Display Structured Citation Authorities
     st.subheader("📚 Referenced Legal Authorities (Retrieved & Reranked)")
